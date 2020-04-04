@@ -1,0 +1,42 @@
+# tensorflow 入门
+for i in range(2): #列出range2 ，range2 = 0，1
+    print(i)
+
+for i in [0,1]:
+    print(i)
+
+i = 0
+while i <2 : #while函数，满足则循环
+    print(i)
+    i += 1
+
+while True : #创建循环
+    print('hello world!')
+    break #停止命令
+print('\n\n开始练习numpy')
+import numpy as np
+a = np.array(['hello' , 'world']) #用[]表示添加数组。
+print('Current array: {}'.format(a)) #格式为 '  {} '.format() 将format里面的参数给{}
+a = np.append(a,'!')
+for i in a :
+    print(i)
+for i,e in enumerate(a): #引用enumerate，其函数作用为将一个可遍历的数据对象(如列表、元组或字符串)组合为一个索引序列，同时列出数据和数据下标
+    print('index= {},was= {}'.format(i,e)) #将i,e赋值于index ，was
+print('\n创建1行数组')
+b = np.array([1, 0, 2, 4, 5, 3])
+print(b)
+print('Max: {}'.format(np.max(b))) #最大值
+print('Average: {}'.format(np.average(b))) #平均值
+print('Max index:{}'.format(np.argmax(b))) #最大值的索引
+
+print('\nYou can type anything,打印任何参数类型')
+print('type of b: {}\ntype of b[0]: {}'.format((type(b)),type(b[0]))) #b 及 b[0] 类型
+
+print('\n打印出3行4列随机数组')
+c = np.random.rand(3,4)
+print(c)
+
+print('\n用 .shape 功能查看维度')
+print('shape of a: {}'.format(a.shape))
+print('shape of b: {}'.format(b.shape))
+print('shape of c: {}'.format(c.shape))

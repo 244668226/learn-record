@@ -1,0 +1,141 @@
+#创建一个神经网络，内容是将一个28*28=784字节的图像作为输入，然后识别出图像代表的10不同的服饰里为哪种。 fashion MNIST图像数据库
+
+!pip install -U tensorflow_datasets #下载tensorflow的数据库
+Requirement already up-to-date: tensorflow_datasets in /usr/local/lib/python3.6/dist-packages (2.1.0)
+Requirement already satisfied, skipping upgrade: protobuf>=3.6.1 in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (3.10.0)
+Requirement already satisfied, skipping upgrade: dill in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (0.3.1.1)
+Requirement already satisfied, skipping upgrade: requests>=2.19.0 in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (2.21.0)
+Requirement already satisfied, skipping upgrade: attrs>=18.1.0 in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (19.3.0)
+Requirement already satisfied, skipping upgrade: tensorflow-metadata in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (0.21.1)
+Requirement already satisfied, skipping upgrade: six in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (1.12.0)
+Requirement already satisfied, skipping upgrade: promise in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (2.3)
+Requirement already satisfied, skipping upgrade: future in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (0.16.0)
+Requirement already satisfied, skipping upgrade: wrapt in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (1.12.1)
+Requirement already satisfied, skipping upgrade: tqdm in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (4.38.0)
+Requirement already satisfied, skipping upgrade: numpy in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (1.18.2)
+Requirement already satisfied, skipping upgrade: absl-py in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (0.9.0)
+Requirement already satisfied, skipping upgrade: termcolor in /usr/local/lib/python3.6/dist-packages (from tensorflow_datasets) (1.1.0)
+Requirement already satisfied, skipping upgrade: setuptools in /usr/local/lib/python3.6/dist-packages (from protobuf>=3.6.1->tensorflow_datasets) (46.0.0)
+Requirement already satisfied, skipping upgrade: certifi>=2017.4.17 in /usr/local/lib/python3.6/dist-packages (from requests>=2.19.0->tensorflow_datasets) (2019.11.28)
+Requirement already satisfied, skipping upgrade: idna<2.9,>=2.5 in /usr/local/lib/python3.6/dist-packages (from requests>=2.19.0->tensorflow_datasets) (2.8)
+Requirement already satisfied, skipping upgrade: chardet<3.1.0,>=3.0.2 in /usr/local/lib/python3.6/dist-packages (from requests>=2.19.0->tensorflow_datasets) (3.0.4)
+Requirement already satisfied, skipping upgrade: urllib3<1.25,>=1.21.1 in /usr/local/lib/python3.6/dist-packages (from requests>=2.19.0->tensorflow_datasets) (1.24.3)
+Requirement already satisfied, skipping upgrade: googleapis-common-protos in /usr/local/lib/python3.6/dist-packages (from tensorflow-metadata->tensorflow_datasets) (1.51.0)
+from __future__ import absolute_import,division,print_function
+
+import tensorflow as tf
+import tensorflow_datasets as tfds
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR) #让tensorflow仅记录错误信息
+
+#helper libraries 数学模块导入
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+
+#improve progress bar display 改善进度条显示
+import tqdm
+import tqdm.auto
+tqdm.tqdm = tqdm.auto.tqdm
+
+print(tf.__version__)
+2.2.0-rc2
+
+#启用动态图机制
+tf.compat.v1.enable_eager_execution()
+
+dataset,metadata = tfds.load('fashion_mnist',as_supervised = True, with_info = True)
+train_dataset,test_dataset = dataset['train'],dataset['test']
+
+class_names = ['T-shirt-Top', 'Trouser', 'Pullover', 'Dress', 'coat', 'Sabdal', 'shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+num_train_examples = metadata.splits['train'].num_examples
+num_test_examples = metadata.splits['test'].num_examples
+print('number of train : {}'.format(num_train_examples))
+print('number of test : {}'.format(num_test_examples))
+number of train : 60000
+number of test : 10000
+
+def normalize(images,labels): 
+  images = tf.cast(images,tf.float32)
+  images /= 255 #将像素标准化的范围控制在0-1之间 ，机器学习的技巧，不用0-255
+  return images, labels #返回图像和标签对
+
+  train_dataset = train_dataset.map(normalize) #.map作用是将该函数调用到数据集中的每个元素上。
+  test_dataset = test_dataset.map(normalize)
+
+#从数据库收集第一个样本并绘图
+for image,label in test_dataset.take(1):
+  break
+image = image.numpy().reshape((28,28))
+plt.figure()
+plt.imshow(image, cmap = plt.cm.binary)
+plt.colorbar()
+plt.grid(False)
+plt.show()
+
+
+#绘制前25个样本
+plt.figure(figsize = (10,10))
+i = 0 
+for (image,label) in test_dataset.take(25):
+  image = image.numpy().reshape((28,28))
+  plt.subplot(5, 5, i+1)
+  plt.xticks([])
+  plt.yticks([])
+  plt.imshow(image,cmap = plt.cm.binary)
+  plt.grid(False)
+  plt.xlabel(class_names[label])
+  i += 1
+plt.show()
+
+下文开始构建模型
+
+
+model = tf.keras.Sequential([tf.keras.layers.Flatten(input_shape = (28, 28, 1)),tf.keras.layers.Dense(128, activation = tf.nn.relu),tf.keras.layers.Dense(10, activation = tf.nn.softmax)])
+#应用一个包含128神经元的密集层，为了更好地分类fashion MNIST，应用relu激活函数.输出层有10个输出值的密集层 用softmax函数创建概率分布.flatten降到一维数组
+
+model.compile(optimizer = 'adam',
+              loss = 'sparse_categorical_crossentropy',
+              metrics = ['accuracy']) #在训练时能查看准确率指标
+#采用 adam优化器（optimizer），没有指定学习效率，则为默认值。 spare_categorical_crossentropy是进行分类一直用的损失函数
+下文开始训练
+
+BATCH_SIZE = 32
+train_dataset = train_dataset.repeat().shuffle(num_train_examples).batch(BATCH_SIZE) #为数据指定迭代参数。 repeat为永远进行迭代。shuffle随机排列样本顺序。 batch在训练时将32个样本分为一组，加快训练。（此对于任何训练都适用）
+test_dataset = test_dataset.batch(BATCH_SIZE)
+
+model.fit(train_dataset, epochs = 2, steps_per_epoch = math.ceil(num_train_examples/BATCH_SIZE)) #epochs指定何时终止训练。
+Epoch 1/2
+1875/1875 [==============================] - 13s 7ms/step - loss: 3.2863 - accuracy: 0.6875
+Epoch 2/2
+1875/1875 [==============================] - 11s 6ms/step - loss: 0.6515 - accuracy: 0.7701
+
+
+下文开始测试
+
+
+test_loss, test_accuracy = model.evaluate(test_dataset, steps = math.ceil(num_test_examples/32)) #.evaluate函数的作用为评估准确率
+print('accuracy on the test dataset:',test_accuracy)
+313/313 [==============================] - 3s 9ms/step - loss: 0.6516 - accuracy: 0.7608
+accuracy on the test dataset: 0.7608000040054321
+下文用模型进行预测
+
+for test_images,test_labels in test_dataset.take(1): #take(1)指使用一个完整批次，即32个样本。
+  test_images = test_images.numpy()
+  test_labels = test_labels.numpy()
+  predictions = model.predict(test_images)
+
+predictions.shape #打印的意思32个样本中每个样本都有10个概率
+
+
+
+predictions[6]
+
+array([9.8214519e-01, 8.7030195e-08, 7.7946133e-08, 5.4948870e-04,
+       8.0286519e-14, 0.0000000e+00, 1.7305160e-02, 1.2868419e-36,
+       2.1725033e-29, 8.8617140e-38], dtype=float32)
+
+np.argmax(predictions[6]) #找出最大值对应的标签（分类）
+
+
+test_labels[6] #查看实际标签（分类）
